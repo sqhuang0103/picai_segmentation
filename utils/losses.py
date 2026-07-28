@@ -14,15 +14,15 @@ class FocalLoss(nn.Module):
 
     def forward(self, inputs, targets):
         # inputs: (B, 2, D, H, W), targets: (B, D, H, W) long
-        probs = F.softmax(inputs, dim=1)
-        targets_onehot = F.one_hot(targets, num_classes=2).permute(0, 4, 1, 2, 3).float()
+        probs = F.softmax(inputs, dim=1)  # (B, 2, D, H, W)
+        targets_onehot = F.one_hot(targets, num_classes=2).permute(0, 4, 1, 2, 3).float()  # (B, 2, D, H, W)
 
-        p_t = (probs * targets_onehot).sum(dim=1)
-        ce = -torch.log(p_t + 1e-8)
-        focal_weight = (1 - p_t) ** self.gamma
+        p_t = (probs * targets_onehot).sum(dim=1)  # (B, D, H, W)
+        ce = -torch.log(p_t + 1e-8)  # (B, D, H, W)
+        focal_weight = (1 - p_t) ** self.gamma  # (B, D, H, W)
 
-        alpha_t = self.alpha * targets.float() + (1 - self.alpha) * (1 - targets.float())
-        loss = alpha_t * focal_weight * ce
+        alpha_t = self.alpha * targets.float() + (1 - self.alpha) * (1 - targets.float())  # (B, D, H, W)
+        loss = alpha_t * focal_weight * ce  # (B, D, H, W)
 
         if self.reduction == "mean":
             return loss.mean()
@@ -40,12 +40,12 @@ class DiceLoss(nn.Module):
 
     def forward(self, inputs, targets):
         # inputs: (B, 2, D, H, W), targets: (B, D, H, W) long
-        probs = F.softmax(inputs, dim=1)[:, 1]  # foreground prob
-        targets_f = targets.float()
+        probs = F.softmax(inputs, dim=1)[:, 1]  # (B, D, H, W)
+        targets_f = targets.float()  # (B, D, H, W)
 
-        intersection = (probs * targets_f).sum(dim=(1, 2, 3))
-        union = probs.sum(dim=(1, 2, 3)) + targets_f.sum(dim=(1, 2, 3))
-        dice = (2.0 * intersection + self.smooth) / (union + self.smooth)
+        intersection = (probs * targets_f).sum(dim=(1, 2, 3))  # (B,)
+        union = probs.sum(dim=(1, 2, 3)) + targets_f.sum(dim=(1, 2, 3))  # (B,)
+        dice = (2.0 * intersection + self.smooth) / (union + self.smooth)  # (B,)
         return 1.0 - dice.mean()
 
 

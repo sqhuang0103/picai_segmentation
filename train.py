@@ -40,9 +40,9 @@ def train():
         model.train()
         train_loss = 0.0
         for images, labels in train_loader:
-            images = images.float().to(device)
-            labels = labels[:, 0].long().to(device)
-            logits = model(images)
+            images = images.float().to(device)  # (B, 3, D, H, W)
+            labels = labels[:, 0].long().to(device)  # (B, D, H, W)
+            logits = model(images)  # (B, 2, D, H, W)
             loss = criterion(logits, labels)
             optimizer.zero_grad()
             loss.backward()
@@ -55,10 +55,10 @@ def train():
             val_dices = []
             with torch.no_grad():
                 for images, labels in val_loader:
-                    images = images.float().to(device)
-                    labels_np = labels[:, 0].numpy()
-                    logits = model(images)
-                    preds = torch.argmax(logits, dim=1).cpu().numpy()
+                    images = images.float().to(device)  # (B, 3, D, H, W)
+                    labels_np = labels[:, 0].numpy()  # (B, D, H, W)
+                    logits = model(images)  # (B, 2, D, H, W)
+                    preds = torch.argmax(logits, dim=1).cpu().numpy()  # (B, D, H, W)
                     for i in range(preds.shape[0]):
                         val_dices.append(compute_dice(preds[i], labels_np[i]))
             mean_dice = np.mean(val_dices) if val_dices else 0.0

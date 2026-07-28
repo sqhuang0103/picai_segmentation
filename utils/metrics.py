@@ -45,7 +45,7 @@ def evaluate_metrics(probs, preds, targets):
     Returns:
         dict with AUC, Dice, Sen@90Spe, Spe@90Sen
     """
-    patient_targets = (targets.reshape(targets.shape[0], -1).sum(axis=1) > 0).astype(float)
+    patient_targets = (targets.reshape(targets.shape[0], -1).sum(axis=1) > 0).astype(float)  # (N,)
 
     dices = []
     for i in range(len(preds)):
