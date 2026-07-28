@@ -3,7 +3,7 @@ import numpy as np
 import SimpleITK as sitk
 from torch.utils.data import Dataset
 
-# PI-CAI baseline 标准预处理参数
+# PI-CAI baseline preprocessing parameters
 TARGET_SPACING = (3.0, 0.5, 0.5)  # mm, (D, H, W)
 TARGET_SIZE = (20, 256, 256)
 CLIP_LOW_PERCENTILE = 0.5
@@ -11,7 +11,7 @@ CLIP_HIGH_PERCENTILE = 99.5
 
 
 def resample_volume(image, target_spacing, is_label=False):
-    """将 SimpleITK image 重采样到目标 spacing。"""
+    """Resample a SimpleITK image to target spacing."""
     original_spacing = np.array(image.GetSpacing())       # (W, H, D) in sitk
     original_size = np.array(image.GetSize())
     target_spacing_sitk = np.array(target_spacing)[::-1]  # (D,H,W) -> (W,H,D)
@@ -26,16 +26,15 @@ def resample_volume(image, target_spacing, is_label=False):
     resampler.SetTransform(sitk.Transform())
     if is_label:
         resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-        resampler.SetDefaultPixelValue(0)
     else:
         resampler.SetInterpolator(sitk.sitkLinear)
-        resampler.SetDefaultPixelValue(0)
+    resampler.SetDefaultPixelValue(0)
 
     return resampler.Execute(image)
 
 
 def center_crop_or_pad(vol, target_shape):
-    """对 3D numpy array 做中心裁剪或零填充到 target_shape。"""
+    """Center crop or zero-pad a 3D numpy array to target_shape."""
     result = np.zeros(target_shape, dtype=vol.dtype)
     slices_src, slices_dst = [], []
     for i in range(len(target_shape)):
@@ -53,7 +52,7 @@ def center_crop_or_pad(vol, target_shape):
 
 
 def zscore_normalize(vol, low_pct=CLIP_LOW_PERCENTILE, high_pct=CLIP_HIGH_PERCENTILE):
-    """0.5/99.5 百分位 clip + instance-wise z-score 归一化。"""
+    """Percentile clipping (0.5/99.5) + instance-wise z-score normalization."""
     low = np.percentile(vol, low_pct)
     high = np.percentile(vol, high_pct)
     vol = np.clip(vol, low, high)
@@ -96,7 +95,7 @@ class PICAIDataset(Dataset):
         return len(self.samples)
 
     def _load_and_preprocess(self, path, is_label=False):
-        """读取 → 重采样 → center crop/pad → 归一化（仅影像）。"""
+        """Read -> resample -> center crop/pad -> normalize (images only)."""
         image = sitk.ReadImage(path)
         image = resample_volume(image, self.target_spacing, is_label=is_label)
         vol = sitk.GetArrayFromImage(image).astype(np.float32)  # (D, H, W)
@@ -127,7 +126,7 @@ class PICAIDataset(Dataset):
 
 
 class PICAIPreprocessedDataset(Dataset):
-    """读取离线预处理后的 NIfTI 文件，跳过在线重采样。"""
+    """Load preprocessed NIfTI files, skipping online resampling."""
 
     def __init__(self, preprocessed_dir, subject_ids, transform=None):
         self.images_dir = os.path.join(preprocessed_dir, "images")

@@ -39,9 +39,9 @@ def specificity_at_sensitivity(probs, targets, target_sen=0.90):
 def evaluate_metrics(probs, preds, targets):
     """
     Args:
-        probs: (N,) 每个样本的预测概率（patient-level，取体积最大概率）
-        preds: (N, D, H, W) 二值分割预测
-        targets: (N, D, H, W) 二值分割标注
+        probs: (N,) patient-level prediction probabilities (max over volume)
+        preds: (N, D, H, W) binary segmentation predictions
+        targets: (N, D, H, W) binary segmentation ground truth
     Returns:
         dict with AUC, Dice, Sen@90Spe, Spe@90Sen
     """

@@ -3,16 +3,16 @@ from scipy.ndimage import rotate, zoom, gaussian_filter, map_coordinates
 
 
 def random_flip(image, label, axes=(0, 1, 2)):
-    """沿各轴随机翻转（镜像），对应 nnUNet mirroring axes (0,1,2)。"""
+    """Random flip along each axis (mirroring axes 0,1,2 as in nnUNet)."""
     for ax in axes:
         if np.random.rand() < 0.5:
-            image = np.flip(image, axis=ax + 1)  # +1 because channel dim
+            image = np.flip(image, axis=ax + 1)  # +1 for channel dim
             label = np.flip(label, axis=ax)
     return np.ascontiguousarray(image), np.ascontiguousarray(label)
 
 
 def random_rotate(image, label, max_angle=30, p=0.2):
-    """随机旋转 ±max_angle 度，在 H-W 平面。"""
+    """Random rotation in the H-W plane."""
     if np.random.rand() > p:
         return image, label
     angle = np.random.uniform(-max_angle, max_angle)
@@ -27,7 +27,7 @@ def random_rotate(image, label, max_angle=30, p=0.2):
 
 
 def random_scale(image, label, scale_range=(0.7, 1.4), p=0.2):
-    """随机缩放后 center crop/pad 回原始尺寸。"""
+    """Random scaling with center crop/pad back to original size."""
     if np.random.rand() > p:
         return image, label
     scale = np.random.uniform(*scale_range)
@@ -45,7 +45,7 @@ def random_scale(image, label, scale_range=(0.7, 1.4), p=0.2):
 
 
 def random_elastic(image, label, alpha=(0, 900), sigma=(9, 13), p=0.2):
-    """弹性形变。"""
+    """Elastic deformation."""
     if np.random.rand() > p:
         return image, label
     shape = image.shape[1:]
@@ -65,7 +65,7 @@ def random_elastic(image, label, alpha=(0, 900), sigma=(9, 13), p=0.2):
 
 
 def random_gaussian_noise(image, p=0.1):
-    """高斯噪声。"""
+    """Additive Gaussian noise."""
     if np.random.rand() > p:
         return image
     noise = np.random.normal(0, 0.1, image.shape).astype(np.float32)
@@ -73,7 +73,7 @@ def random_gaussian_noise(image, p=0.1):
 
 
 def random_gaussian_blur(image, sigma_range=(0.5, 1.0), p=0.2):
-    """高斯模糊，per channel 0.5 概率。"""
+    """Gaussian blur, applied per channel with 0.5 probability."""
     if np.random.rand() > p:
         return image
     for c in range(image.shape[0]):
@@ -84,7 +84,7 @@ def random_gaussian_blur(image, sigma_range=(0.5, 1.0), p=0.2):
 
 
 def random_brightness_multiplicative(image, factor_range=(0.75, 1.25), p=0.15):
-    """亮度乘法扰动。"""
+    """Multiplicative brightness perturbation."""
     if np.random.rand() > p:
         return image
     factor = np.random.uniform(*factor_range)
@@ -92,7 +92,7 @@ def random_brightness_multiplicative(image, factor_range=(0.75, 1.25), p=0.15):
 
 
 def random_gamma(image, gamma_range=(0.7, 1.5), p=0.3):
-    """Gamma 变换。"""
+    """Gamma transform."""
     if np.random.rand() > p:
         return image
     gamma = np.random.uniform(*gamma_range)
@@ -129,19 +129,19 @@ def _center_crop_or_pad_4d(vol, target_shape):
 
 
 class PicaiAugmentation:
-    """nnUNet 风格数据增强 pipeline，参数对齐 PI-CAI baseline。"""
+    """nnUNet-style augmentation pipeline, parameters aligned with PI-CAI baseline."""
 
     def __call__(self, image, label):
         image = image.copy()
         label = label.copy()
 
-        # 空间增强
+        # Spatial augmentations
         image, label = random_flip(image, label)
         image, label = random_rotate(image, label, max_angle=30, p=0.2)
         image, label = random_scale(image, label, scale_range=(0.7, 1.4), p=0.2)
         image, label = random_elastic(image, label, p=0.2)
 
-        # 强度增强
+        # Intensity augmentations
         image = random_gaussian_noise(image, p=0.1)
         image = random_gaussian_blur(image, p=0.2)
         image = random_brightness_multiplicative(image, p=0.15)

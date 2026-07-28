@@ -1,70 +1,90 @@
 # PI-CAI Challenge: Prostate Cancer Segmentation
 
-## 项目结构
+## Project Structure
 
 ```
 picai_segmentation/
-├── README.md                # 项目结构与说明（本文件）
-├── PROGRESS.md              # 完成步骤记录
+├── README.md                # Project overview (this file)
+├── PROGRESS.md              # Step-by-step progress log
 ├── configs/
-│   ├── config.py            # 超参数与路径配置
-│   └── splits.json          # 官方 5-fold 划分（patient-level）
+│   ├── config.py            # Hyperparameters and path configuration
+│   └── splits.json          # Official 5-fold cross-validation splits (patient-level)
 ├── data/
-│   ├── download_data.sh     # 数据下载脚本（Zenodo + picai_labels）
-│   ├── preprocess.py        # 离线预处理：.mha → 重采样+裁剪+归一化 → .nii.gz
-│   ├── dataset.py           # 数据加载（支持在线/离线预处理）
-│   └── augmentations.py     # nnUNet 风格数据增强
+│   ├── download_data.sh     # Data download script (Zenodo + picai_labels)
+│   ├── preprocess.py        # Offline preprocessing: .mha → resample + crop + normalize → .nii.gz
+│   ├── dataset.py           # Dataset classes (online and preprocessed)
+│   └── augmentations.py     # nnUNet-style data augmentation
 ├── models/
-│   └── unet.py              # 自定义 3D UNet
+│   └── unet.py              # Custom 3D UNet
 ├── utils/
 │   ├── losses.py            # Focal Loss + Dice Loss
-│   └── metrics.py           # 评估指标
-├── train.py                 # 训练脚本
-├── evaluate.py              # 评估脚本
-└── outputs/                 # 模型权重与日志
+│   └── metrics.py           # Evaluation metrics
+├── train.py                 # Training script
+├── evaluate.py              # Evaluation script
+└── outputs/                 # Model checkpoints and logs
 ```
 
-## 任务
+## Task
 
-- **目标**: 前列腺癌临床显著性病灶分割（PI-CAI Challenge）
-- **网络**: 自实现 3D UNet
-- **输入**: T2W + ADC + HBV 三模态 MRI
+- **Objective**: Clinically significant prostate cancer (csPCa) lesion segmentation
+- **Challenge**: [PI-CAI (Prostate Imaging: Cancer AI)](https://pi-cai.grand-challenge.org/)
+- **Network**: Custom 3D UNet (self-implemented)
+- **Input**: Multi-parametric MRI — T2W + ADC + HBV (3 channels)
 
-## 预处理（对齐 PI-CAI baseline）
+## Preprocessing (following PI-CAI baseline)
 
-- 重采样至 3.0 × 0.5 × 0.5 mm spacing
-- 中心裁剪/填充至 20 × 256 × 256 体素
-- 0.5/99.5 百分位 clip + instance-wise z-score 归一化
+- Resample to 3.0 × 0.5 × 0.5 mm voxel spacing
+- Center crop / pad to 20 × 256 × 256 voxels
+- Intensity clipping at 0.5 / 99.5 percentiles + instance-wise z-score normalization
+- Labels resampled with nearest-neighbor interpolation
 
-## 训练设置（对齐 PI-CAI baseline）
+## Network Architecture
 
-| 参数 | 值 |
-|------|-----|
+- 3D UNet with encoder-decoder structure and skip connections
+- InstanceNorm3d + LeakyReLU (suitable for small batch sizes in 3D medical imaging)
+- Feature channels: 32 → 64 → 128 → 256 → 512 → 1024 (bottleneck)
+- Anisotropic pooling strides: (2,2,2) → (1,2,2) → (1,2,2) → (1,2,2) → (2,2,2)
+
+## Training Configuration (following PI-CAI baseline)
+
+| Parameter | Value |
+|-----------|-------|
 | Loss | Focal Loss (gamma=1.0, alpha=inverse class balance) |
 | Optimizer | Adam + AMSGrad |
 | Learning Rate | 1e-3 |
 | Batch Size | 8 |
 | Epochs | 100 |
-| Normalization | InstanceNorm3d + LeakyReLU |
-| Augmentation | nnUNet 风格（弹性形变、旋转、缩放、翻转、噪声、模糊、gamma） |
+| Validation | Every 10 epochs |
+| Augmentation | nnUNet-style (elastic deformation, rotation, scaling, flipping, Gaussian noise/blur, brightness, gamma) |
 
-## 评估指标
+## Evaluation Metrics
 
-- AUC — patient-level
-- Dice Coefficient — voxel-level
-- Sensitivity @ 90% Specificity — patient-level
-- Specificity @ 90% Sensitivity — patient-level
+- **AUC** (Area Under the ROC Curve) — patient-level
+- **Dice Coefficient** — voxel-level
+- **Sensitivity @ 90% Specificity** — patient-level
+- **Specificity @ 90% Sensitivity** — patient-level
 
-## 使用方法
+## Usage
 
 ```bash
-bash data/download_data.sh        # 1. 下载数据
-qsub preprocess.sh                # 2. 离线预处理 → .nii.gz
-qsub train.sh                     # 3. 训练
-python evaluate.py                # 4. 评估
+# 1. Download data from Zenodo and clone annotations
+bash data/download_data.sh
+
+# 2. Offline preprocessing (resample + crop + normalize → NIfTI)
+qsub preprocess.sh          # or: python data/preprocess.py
+
+# 3. Train
+qsub train.sh               # or: python train.py
+
+# 4. Evaluate
+python evaluate.py
 ```
 
-## 运行环境
+## Requirements
 
 - Python 3.9+
-- PyTorch, NumPy, SimpleITK, scikit-learn, SciPy
+- PyTorch
+- NumPy
+- SimpleITK
+- scikit-learn
+- SciPy

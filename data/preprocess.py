@@ -1,8 +1,7 @@
 """
-离线预处理：原始 .mha → 重采样 + center crop/pad + z-score → .nii.gz
-预处理后训练时直接读取，跳过在线重采样，大幅加速 I/O。
+Offline preprocessing: raw .mha -> resample + center crop/pad + z-score -> .nii.gz
 
-输出目录结构:
+Output structure:
   preprocessed/
     images/
       {subject_id}.nii.gz     # (C, D, H, W) = (3, 20, 256, 256) float32
