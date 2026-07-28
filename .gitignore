@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+outputs/*.pth
+outputs/*.log
+outputs/*.err
+.DS_Store
+data/images
+data/picai_labels
