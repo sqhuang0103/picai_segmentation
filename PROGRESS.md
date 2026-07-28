@@ -55,7 +55,13 @@
 - **状态**: 已完成
 - **内容**: `data/preprocess.py` — 原始 .mha → 重采样+裁剪+归一化 → .nii.gz，多进程并行处理全部 1500 例；`preprocess.sh` — SGE 提交脚本（8 core, 4h）；`PICAIPreprocessedDataset` — 直接读取预处理后的 NIfTI
 
+## Step 12: Multi-View Training Strategy
+- **日期**: 2026-07-28
+- **状态**: 已完成
+- **内容**: 每个 volume 随机裁剪 K=4 个 crop（16×192×192），所有 view 共享同一 label，平均 logits 计算主 loss，加一致性正则化 L_consistency = (1/K)·Σ(p_k - p_mean)²，λ 在前 10 epoch 线性 warmup；推理用 center crop；`PICAIMultiViewDataset` + `train_multiview.py` + `evaluate_multiview.py`
+
 ## 后续 TODO
-- [ ] 提交预处理任务 `qsub preprocess.sh`
-- [ ] 预处理完成后提交训练 `qsub train.sh`
+- [ ] 提交 baseline 训练 `qsub train.sh`
+- [ ] 提交 multi-view 训练 `qsub train_multiview.sh`
+- [ ] 对比两个实验结果
 - [ ] 整理结果

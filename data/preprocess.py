@@ -51,24 +51,24 @@ def process_subject(subject_id):
             return f"[miss] {subject_id}: {mod} not found"
         img = sitk.ReadImage(path)
         img = resample_volume(img, TARGET_SPACING, is_label=False)
-        vol = sitk.GetArrayFromImage(img).astype(np.float32)
-        vol = center_crop_or_pad(vol, TARGET_SIZE)
-        vol = zscore_normalize(vol)
+        vol = sitk.GetArrayFromImage(img).astype(np.float32)  # (D, H, W)
+        vol = center_crop_or_pad(vol, TARGET_SIZE)  # (20, 256, 256)
+        vol = zscore_normalize(vol)  # (20, 256, 256)
         channels.append(vol)
 
     image = np.stack(channels, axis=0)  # (3, 20, 256, 256)
-    img_sitk = sitk.GetImageFromArray(image)
+    img_sitk = sitk.GetImageFromArray(image)  # sitk treats first dim as depth
     sitk.WriteImage(img_sitk, out_img_path)
 
     label_path = os.path.join(ANNOTATION_DIR, f"{subject_id}.nii.gz")
     if os.path.exists(label_path):
         lbl = sitk.ReadImage(label_path)
         lbl = resample_volume(lbl, TARGET_SPACING, is_label=True)
-        lbl_arr = sitk.GetArrayFromImage(lbl).astype(np.float32)
-        lbl_arr = center_crop_or_pad(lbl_arr, TARGET_SIZE)
-        lbl_arr = (lbl_arr > 0).astype(np.uint8)
+        lbl_arr = sitk.GetArrayFromImage(lbl).astype(np.float32)  # (D, H, W)
+        lbl_arr = center_crop_or_pad(lbl_arr, TARGET_SIZE)  # (20, 256, 256)
+        lbl_arr = (lbl_arr > 0).astype(np.uint8)  # (20, 256, 256)
     else:
-        lbl_arr = np.zeros(TARGET_SIZE, dtype=np.uint8)
+        lbl_arr = np.zeros(TARGET_SIZE, dtype=np.uint8)  # (20, 256, 256)
 
     lbl_sitk = sitk.GetImageFromArray(lbl_arr)
     sitk.WriteImage(lbl_sitk, out_lbl_path)
