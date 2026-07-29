@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import SimpleITK as sitk
 from torch.utils.data import DataLoader
 
 from configs.config import *
@@ -18,11 +19,17 @@ def evaluate():
                             num_workers=NUM_WORKERS, pin_memory=True)
 
     model = UNet(in_channels=IN_CHANNELS, num_classes=NUM_CLASSES).to(device)
-    ckpt_path = os.path.join(OUTPUT_DIR, "best_model.pth")
+    ckpt_path = os.path.join(OUTPUT_DIR, "best_model_v2.pth")
+    if not os.path.exists(ckpt_path):
+        ckpt_path = os.path.join(OUTPUT_DIR, "best_model.pth")
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.eval()
 
+    pred_dir = os.path.join(OUTPUT_DIR, "predictions")
+    os.makedirs(pred_dir, exist_ok=True)
+
     all_probs, all_preds, all_targets = [], [], []
+    sample_idx = 0
     with torch.no_grad():
         for images, labels in val_loader:
             images = images.float().to(device)  # (B, 3, D, H, W)
@@ -31,12 +38,17 @@ def evaluate():
             preds = (prob_map > 0.5).cpu().numpy().astype(float)  # (B, D, H, W)
             probs = prob_map.cpu().numpy()  # (B, D, H, W)
 
-            patient_probs = probs.reshape(probs.shape[0], -1).max(axis=1)  # (B,)
-            all_probs.append(patient_probs)
+            for i in range(preds.shape[0]):
+                sid = val_set.samples[sample_idx]
+                pred_sitk = sitk.GetImageFromArray(preds[i].astype(np.uint8))  # (D, H, W)
+                sitk.WriteImage(pred_sitk, os.path.join(pred_dir, f"{sid}.nii.gz"))
+                sample_idx += 1
+
+            all_probs.append(probs)  # (B, D, H, W)
             all_preds.append(preds)
             all_targets.append(labels[:, 0].numpy())  # (B, D, H, W)
 
-    all_probs = np.concatenate(all_probs)  # (N,)
+    all_probs = np.concatenate(all_probs)  # (N, D, H, W)
     all_preds = np.concatenate(all_preds)  # (N, D, H, W)
     all_targets = np.concatenate(all_targets)  # (N, D, H, W)
 
@@ -47,6 +59,7 @@ def evaluate():
     print("=" * 40)
     for k, v in results.items():
         print(f"  {k:12s}: {v:.4f}")
+    print(f"Predictions saved to: {pred_dir}")
     print("=" * 40)
 
 
